@@ -2,10 +2,42 @@ import './ResetPassword.scss';
 import backgroundImage from '../../../assets/images/background.jpg';
 import Input from '../../../components/input/Input';
 import Button from '../../../components/button/Button';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
+import { useState } from 'react';
+import { authService } from '../../../services/api/auth/auth.service';
 
 const ResetPassword = () => {
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [responseMessage, setResponseMessage] = useState('');
+  const [alertType, setAlertType] = useState('');
+
+  const [searchParams] = useSearchParams();
+
+  const handleResetPassword = async (event) => {
+    setLoading(true);
+    event.preventDefault();
+
+    try {
+      const body = { password, confirmPassword };
+      const token = searchParams.get('token');
+
+      const result = await authService.resetPassword(token, body);
+
+      setResponseMessage(result?.data?.message);
+      setLoading(false);
+      setAlertType('alert-success');
+      setPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      setLoading(false);
+      setAlertType('alert-error');
+      setResponseMessage(error?.response?.data.message);
+    }
+  };
+
   return (
     <div
       className="container-wrapper"
@@ -14,7 +46,7 @@ const ResetPassword = () => {
       <div className="container-wrapper-auth">
         <div
           className="tabs reset-password-tabs"
-          //   style={{ height: `${responseMessage ? '400px' : ''}` }}
+          style={{ height: `${responseMessage ? '400px' : ''}` }}
         >
           <div className="tabs-auth">
             <ul className="tab-group">
@@ -24,34 +56,44 @@ const ResetPassword = () => {
             </ul>
             <div className="tab-item">
               <div className="auth-inner">
-                {/* <div className="alerts" role="alert">
-                  Error message
-                </div> */}
-                <form className="reset-password-form">
+                {responseMessage && (
+                  <div className={`alerts ${alertType}`} role="alert">
+                    {responseMessage}
+                  </div>
+                )}
+                <form
+                  className="reset-password-form"
+                  onSubmit={handleResetPassword}
+                >
                   <div className="form-input-container">
                     <Input
                       id="password"
                       name="password"
                       type="password"
-                      value={'password'}
+                      value={password}
                       labelText="New Password"
                       placeholder="New Password"
-                      handleChange={() => {}}
+                      handleChange={(event) => setPassword(event.target.value)}
                     />
                     <Input
                       id="cpassword"
                       name="cpassword"
                       type="password"
-                      value={'confirmPassword'}
+                      value={confirmPassword}
                       labelText="Confirm Password"
                       placeholder="Confirm Password"
-                      handleChange={() => {}}
+                      handleChange={(event) =>
+                        setConfirmPassword(event.target.value)
+                      }
                     />
                   </div>
+
                   <Button
-                    label="RESET PASSWORD"
+                    label={`${
+                      loading ? 'RESET PASSWORD IN PROGRESS.' : 'RESET'
+                    }`}
                     className="auth-button button"
-                    disabled={false}
+                    disabled={!password || !confirmPassword}
                   />
 
                   <Link to={'/'}>

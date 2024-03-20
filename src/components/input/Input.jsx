@@ -10,6 +10,7 @@ const Input = ({
   labelText,
   placeHolder,
   handleChange,
+  style,
 }) => {
   return (
     <>
@@ -21,6 +22,7 @@ const Input = ({
         )}
 
         <input
+          style={style}
           id={id}
           type={type}
           name={name}
@@ -44,6 +46,7 @@ Input.propTypes = {
   className: PropTypes.string,
   placeHolder: PropTypes.string,
   handleChange: PropTypes.func,
+  style: PropTypes.object,
 };
 
 export default Input;
