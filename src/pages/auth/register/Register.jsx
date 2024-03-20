@@ -1,12 +1,13 @@
 import { FaArrowRight } from 'react-icons/fa';
 
-import Input from '../../../components/input/Input';
-import Button from '../../../components/button/Button';
+import Input from 'src/components/input/Input';
+import Button from 'src/components/button/Button';
 
 import './Register.scss';
 import { useEffect, useState } from 'react';
-import { Utils } from '../../../services/utils/util.service';
-import { authService } from '../../../services/api/auth/auth.service';
+import { Utils } from 'src/services/utils/util.service';
+import { authService } from 'src/services/api/auth/auth.service';
+import { useNavigate } from 'react-router';
 const Register = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -16,6 +17,8 @@ const Register = () => {
   const [alertType, setAlertType] = useState('');
   const [hasError, setHasError] = useState(false);
   const [user, setUser] = useState();
+
+  const navigate = useNavigate();
 
   const registerUser = async (event) => {
     setLoading(true);
@@ -50,11 +53,8 @@ const Register = () => {
 
   useEffect(() => {
     if (loading && !user) return;
-    if (user) {
-      console.log('navigate to streams page');
-      setLoading(false);
-    }
-  }, [loading, user]);
+    if (user) navigate('/app/social/streams');
+  }, [loading, user, navigate]);
 
   return (
     <div className="auth-inner">
