@@ -7,6 +7,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import './Login.scss';
 import { useEffect, useState } from 'react';
 import { authService } from 'src/services/api/auth/auth.service';
+import useLocalStorage from 'src/hooks/useLocalStorage';
+import { Utils } from 'src/services/utils/util.service';
+import useSessionStorage from 'src/hooks/useSessionStorage';
+import { useDispatch } from 'react-redux';
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +21,12 @@ const Login = () => {
   const [alertType, setAlertType] = useState('');
   const [user, setUser] = useState();
 
+  const [setStoredUsername] = useLocalStorage('username', 'set');
+  const [setLoggedIn] = useLocalStorage('keepLoggedIn', 'set');
+  const [pageReload] = useSessionStorage('pageReload', 'set');
+
+  const dispatch = useDispatch();
+
   const navigate = useNavigate();
 
   const loginUser = async (event) => {
@@ -24,11 +34,17 @@ const Login = () => {
     event.preventDefault();
     try {
       const result = await authService.signIn({ username, password });
-      console.log(result);
-      setKeepLoggedIn(keepLoggedIn);
+      // console.log(result);
+
+      setLoggedIn(keepLoggedIn);
+      setStoredUsername(username);
+
       setUser(result.data.user);
       setHasError(false);
-      alertType('alert-success');
+      setAlertType('alert-success');
+
+      console.log('hi');
+      Utils.dispatchUser(result, pageReload, dispatch, setUser);
     } catch (error) {
       setLoading(false);
       setHasError(true);
@@ -39,7 +55,7 @@ const Login = () => {
 
   useEffect(() => {
     if (loading && !user) return;
-    if (user) navigate('/app/social/streams');
+    // if (user) navigate('/app/social/streams');
   }, [loading, user, navigate]);
 
   return (
