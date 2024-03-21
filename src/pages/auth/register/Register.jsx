@@ -8,6 +8,9 @@ import { useEffect, useState } from 'react';
 import { Utils } from 'src/services/utils/util.service';
 import { authService } from 'src/services/api/auth/auth.service';
 import { useNavigate } from 'react-router';
+import useLocalStorage from 'src/hooks/useLocalStorage';
+import useSessionStorage from 'src/hooks/useSessionStorage';
+import { useDispatch } from 'react-redux';
 const Register = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -17,6 +20,11 @@ const Register = () => {
   const [alertType, setAlertType] = useState('');
   const [hasError, setHasError] = useState(false);
   const [user, setUser] = useState();
+  const [setStoredUsername] = useLocalStorage('username', 'set');
+  const [setLoggedIn] = useLocalStorage('keepLoggedIn', 'set');
+  const [pageReload] = useSessionStorage('pageReload', 'set');
+
+  const dispatch = useDispatch();
 
   const navigate = useNavigate();
 
@@ -40,9 +48,15 @@ const Register = () => {
       });
 
       console.log(result);
+
+      setLoggedIn(true);
+      setStoredUsername(username);
+
       setUser(result.data.user);
       setHasError(false);
       setAlertType('alert-success');
+
+      Utils.dispatchUser(result, pageReload, dispatch, setUser);
     } catch (error) {
       setLoading(false);
       setHasError(true);
