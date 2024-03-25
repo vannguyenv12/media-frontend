@@ -43,7 +43,6 @@ const Login = () => {
       setHasError(false);
       setAlertType('alert-success');
 
-      console.log('hi');
       Utils.dispatchUser(result, pageReload, dispatch, setUser);
     } catch (error) {
       setLoading(false);
@@ -55,7 +54,7 @@ const Login = () => {
 
   useEffect(() => {
     if (loading && !user) return;
-    // if (user) navigate('/app/social/streams');
+    if (user) navigate('/app/social/streams');
   }, [loading, user, navigate]);
 
   return (

@@ -32,7 +32,6 @@ export class Utils {
 
   static dispatchUser(result, pageReload, dispatch, setUser) {
     pageReload(true);
-    console.log(dispatch);
     dispatch(addUser({ token: result.data.token, profile: result.data.user }));
 
     setUser(result.data.user);
@@ -50,5 +49,27 @@ export class Utils {
     deleteSessionPageReload();
 
     setLoggedIn(false);
+  }
+
+  static appEnvironment() {
+    const env = import.meta.env.VITE_APP_ENVIRONMENT;
+
+    if (env === 'development') {
+      return 'DEV';
+    } else if (env === 'staging') {
+      return 'STG';
+    }
+  }
+
+  static mapSettingsDropdownItems(setSettings) {
+    const items = [];
+    const item = {
+      topText: 'My Profile',
+      subText: 'View personal profile',
+    };
+
+    items.push(item);
+    setSettings(items);
+    return items;
   }
 }
