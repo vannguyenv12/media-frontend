@@ -11,9 +11,9 @@ import Avatar from 'src/components/avatar/Avatar';
 import { useEffect, useRef, useState } from 'react';
 import { Utils } from 'src/services/utils/util.service';
 import useDetectOutsideClick from 'src/hooks/useDetectOutsideClick';
-import MessageSidebar from '../message-sidebar/MessageSidebar';
+import MessageSidebar from 'src/components/message-sidebar/MessageSidebar';
 import { useDispatch, useSelector } from 'react-redux';
-import Dropdown from '../dropdown/Dropdown';
+import Dropdown from 'src/components/dropdown/Dropdown';
 import useEffectOnce from 'src/hooks/useEffectOnce';
 import { ProfileUtils } from 'src/services/utils/profile-utils.service';
 import { useNavigate } from 'react-router-dom';
@@ -21,6 +21,10 @@ import useLocalStorage from 'src/hooks/useLocalStorage';
 import useSessionStorage from 'src/hooks/useSessionStorage';
 import { userService } from 'src/services/api/user/user.service';
 import HeaderSkeleton from 'src/components/header/HeaderSkeleton';
+import { notificationService } from 'src/services/api/notifications/notifications.service';
+import { NotificationUtils } from 'src/services/utils/notification-utils.service';
+import NotificationPreview from 'src/components/dialog/NotificationPreview';
+import { socketService } from 'src/services/socket/socket.service';
 
 const Header = () => {
   const { profile } = useSelector((state) => state.user);
@@ -32,6 +36,16 @@ const Header = () => {
   const messageRef = useRef(null);
   const settingsRef = useRef(null);
   const notificationRef = useRef(null);
+
+  const [notifications, setNotifications] = useState([]);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notificationDialogContent, setNotificationDialogContent] = useState({
+    post: '',
+    imgUrl: '',
+    comment: '',
+    reaction: '',
+    senderName: '',
+  });
 
   const [isMessageActive, setIsMessageActive] = useDetectOutsideClick(
     messageRef,
@@ -46,6 +60,7 @@ const Header = () => {
     false
   );
 
+  const storedUsername = useLocalStorage('username', 'get');
   const [setLoggedIn] = useLocalStorage('keepLoggedIn', 'set');
   const [deleteStorageUsername] = useLocalStorage('username', 'delete');
   const [deleteSessionPageReload] = useSessionStorage('pageReload', 'delete');
@@ -53,8 +68,7 @@ const Header = () => {
   const navigate = useNavigate();
 
   const openChatPage = () => {};
-  const onMarkAsRead = () => {};
-  const onDeleteNotification = () => {};
+
   const onLogout = async () => {
     try {
       setLoggedIn(false);
@@ -69,7 +83,11 @@ const Header = () => {
       await userService.logoutUser();
       navigate('/');
     } catch (error) {
-      console.log(error);
+      Utils.dispatchNotification(
+        error.response.data.message,
+        'error',
+        dispatch
+      );
     }
   };
 
@@ -77,8 +95,57 @@ const Header = () => {
     environment === 'DEV' ? '#50b5ff' : environment === 'STG' ? '#e9710f' : ''
   }`;
 
+  const getUserNotifications = async () => {
+    try {
+      const response = await notificationService.getUserNotifications();
+      const mappedNotifications =
+        NotificationUtils.mapNotificationDropdownItems(
+          response.data.notifications,
+          setNotificationCount
+        );
+      setNotifications(mappedNotifications);
+      socketService?.socket.emit('setup', { userId: storedUsername });
+    } catch (error) {
+      Utils.dispatchNotification(
+        error.response.data.message,
+        'error',
+        dispatch
+      );
+    }
+  };
+
+  const markAsRead = async (notification) => {
+    try {
+      NotificationUtils.markMessageAsRead(
+        notification?._id,
+        notification,
+        setNotificationDialogContent
+      );
+    } catch (error) {
+      Utils.dispatchNotification(
+        error.response.data.message,
+        'error',
+        dispatch
+      );
+    }
+  };
+
+  const deleteNotification = async (messageId) => {
+    try {
+      const response = await notificationService.deleteNotification(messageId);
+      Utils.dispatchNotification(response.data.message, 'success', dispatch);
+    } catch (error) {
+      Utils.dispatchNotification(
+        error.response.data.message,
+        'error',
+        dispatch
+      );
+    }
+  };
+
   useEffectOnce(() => {
     Utils.mapSettingsDropdownItems(setSettings);
+    getUserNotifications();
   });
 
   useEffect(() => {
@@ -86,6 +153,16 @@ const Header = () => {
 
     setEnvironment(env);
   }, []);
+
+  useEffect(() => {
+    NotificationUtils.socketIONotification(
+      profile,
+      notifications,
+      setNotifications,
+      'header',
+      setNotificationCount
+    );
+  }, [profile, notifications]);
 
   return (
     <>
@@ -102,6 +179,26 @@ const Header = () => {
                 openChatPage={openChatPage}
               />
             </div>
+          )}
+          {notificationDialogContent?.senderName && (
+            <NotificationPreview
+              title="Your post"
+              post={notificationDialogContent?.post}
+              imgUrl={notificationDialogContent?.imgUrl}
+              comment={notificationDialogContent?.comment}
+              reaction={notificationDialogContent?.reaction}
+              senderName={notificationDialogContent?.senderName}
+              secondButtonText="Close"
+              secondBtnHandler={() => {
+                setNotificationDialogContent({
+                  post: '',
+                  imgUrl: '',
+                  comment: '',
+                  reaction: '',
+                  senderName: '',
+                });
+              }}
+            />
           )}
           <div className="header-navbar">
             <div
@@ -138,10 +235,14 @@ const Header = () => {
               >
                 <span className="header-list-name">
                   <FaRegBell className="header-list-icon" />
-                  <span
-                    className="bg-danger-dots dots"
-                    data-testid="notification-dots"
-                  ></span>
+                  {notificationCount > 0 && (
+                    <span
+                      className="bg-danger-dots dots"
+                      data-testid="notification-dots"
+                    >
+                      {notificationCount}
+                    </span>
+                  )}
                 </span>
                 {isNotificationActive && (
                   <ul className="dropdown-ul" ref={notificationRef}>
@@ -149,11 +250,11 @@ const Header = () => {
                       <Dropdown
                         height={300}
                         style={{ right: '250px', top: '20px' }}
-                        data={[]}
-                        notificationCount={0}
+                        data={notifications}
+                        notificationCount={notificationCount}
                         title="Notifications"
-                        onMarkAsRead={onMarkAsRead}
-                        onDeleteNotification={onDeleteNotification}
+                        onMarkAsRead={markAsRead}
+                        onDeleteNotification={deleteNotification}
                       />
                     </li>
                   </ul>

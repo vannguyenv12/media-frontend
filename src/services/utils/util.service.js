@@ -1,5 +1,9 @@
 import { floor, random } from 'lodash';
 import {
+  addNotification,
+  clearNotification,
+} from 'src/redux-toolkit/reducer/notifications/notifications.reducer';
+import {
   addUser,
   clearUser,
 } from 'src/redux-toolkit/reducer/user/user.reducer';
@@ -44,11 +48,20 @@ export class Utils {
     setLoggedIn,
   }) {
     dispatch(clearUser());
+    dispatch(clearNotification());
 
     deleteStorageUsername();
     deleteSessionPageReload();
 
     setLoggedIn(false);
+  }
+
+  static dispatchNotification(message, type, dispatch) {
+    dispatch(addNotification({ message, type }));
+  }
+
+  static dispatchClearNotification(dispatch) {
+    dispatch(clearNotification());
   }
 
   static appEnvironment() {
@@ -71,5 +84,14 @@ export class Utils {
     items.push(item);
     setSettings(items);
     return items;
+  }
+
+  static appImageUrl(version, id) {
+    if (typeof version === 'string' && typeof id === 'string') {
+      version = version.replace(/['"]+/g, '');
+      id = id.replace(/['"]+/g, '');
+    }
+
+    return `https://res.cloudinary.com/dfapum2fd/image/upload/v${version}/${id}`;
   }
 }
